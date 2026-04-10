@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Environment / secrets
+.env
+*.env
+!.env.example
+
+# Face recognition data
+backend/encodings/*.pkl
+backend/dataset/
+backend/datasets/
+
+# Generated exports
+backend/attendance.xlsx
+*.xlsx
+
+# Node / React
+frontend/node_modules/
+frontend/build/
+frontend/.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Database migrations outputs
+database/migrations/*.sql

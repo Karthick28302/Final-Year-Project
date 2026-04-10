@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: attendance_system
+      MYSQL_USER: attendance_user
+      MYSQL_PASSWORD: attendance_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+
+  backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=mysql+pymysql://attendance_user:attendance_pass@db:3306/attendance_system
+    volumes:
+      - ./backend/dataset:/app/dataset
+      - ./backend/encodings:/app/encodings
+    devices:
+      - /dev/video0:/dev/video0  # Linux webcam
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
