@@ -1,41 +1,34 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API from "../services/api";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
-  // ✅ NEW STATES
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    setLoading(true);
-
-    try {
-      const res = await fetch("http://127.0.0.1:5000/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        localStorage.setItem("isAdmin", "true");
-        navigate("/dashboard");
-      } else {
-        alert(data.error);
-      }
-    } catch (err) {
-      console.error(err);
+    if (!username.trim() || !password.trim()) {
+      setError("Username and password are required.");
+      return;
     }
 
-    setLoading(false);
+    setLoading(true);
+    setError("");
+
+    try {
+      await API.post("/api/login", { username: username.trim(), password });
+      localStorage.setItem("isAdmin", "true");
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err?.response?.data?.error || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,37 +36,30 @@ const Login = () => {
       <div style={styles.card}>
         <h2 style={styles.title}>🔐 Admin Login</h2>
 
-        {/* Username */}
         <input
           type="text"
           placeholder="Username"
+          value={username}
           onChange={(e) => setUsername(e.target.value)}
           style={styles.input}
         />
 
-        {/* Password with Eye Icon */}
         <div style={{ position: "relative" }}>
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Password"
+            value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={styles.input}
           />
-
-          <span
-            onClick={() => setShowPassword(!showPassword)}
-            style={styles.eye}
-          >
+          <span onClick={() => setShowPassword(!showPassword)} style={styles.eye}>
             👁️
           </span>
         </div>
 
-        {/* Button */}
-        <button
-          onClick={handleLogin}
-          style={styles.button}
-          disabled={loading}
-        >
+        {error ? <p style={styles.error}>{error}</p> : null}
+
+        <button onClick={handleLogin} style={styles.button} disabled={loading}>
           {loading ? "⏳ Logging in..." : "Login"}
         </button>
       </div>
@@ -91,7 +77,6 @@ const styles = {
     alignItems: "center",
     background: "linear-gradient(to right, #141e30, #243b55)",
   },
-
   card: {
     background: "#ffffff",
     padding: "30px",
@@ -100,12 +85,10 @@ const styles = {
     textAlign: "center",
     boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
   },
-
   title: {
     marginBottom: "20px",
     color: "#333",
   },
-
   input: {
     width: "100%",
     padding: "12px",
@@ -115,7 +98,6 @@ const styles = {
     fontSize: "14px",
     outline: "none",
   },
-
   button: {
     width: "100%",
     padding: "12px",
@@ -127,11 +109,17 @@ const styles = {
     cursor: "pointer",
     transition: "0.3s",
   },
-
   eye: {
     position: "absolute",
     right: "12px",
     top: "12px",
     cursor: "pointer",
+  },
+  error: {
+    marginTop: "-6px",
+    marginBottom: "12px",
+    color: "#dc2626",
+    fontSize: "13px",
+    fontWeight: 500,
   },
 };

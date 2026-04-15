@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:5000";
+import { registerFace } from "../services/userService";
+import { videoFeedUrl } from "../services/cameraService";
 
 const RegisterUser = () => {
   const [name, setName] = useState("");
@@ -44,22 +44,11 @@ const RegisterUser = () => {
     const image = canvas.toDataURL("image/jpeg");
 
     try {
-      const res = await fetch(`${API_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim().toLowerCase(), image }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setMessage(data.message);
-        setName("");
-      } else {
-        setError(data.error || "Registration failed.");
-      }
+      const data = await registerFace(name.trim().toLowerCase(), image);
+      setMessage(data.message || "User registered successfully.");
+      setName("");
     } catch (err) {
-      setError("Could not connect to backend.");
+      setError(err?.response?.data?.error || "Could not connect to backend.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +73,7 @@ const RegisterUser = () => {
             <img
               key={streamKey}
               ref={imgRef}
-              src={`${API_URL}/video_feed?view=register&v=${streamKey}`}
+              src={videoFeedUrl(`view=register&v=${streamKey}`)}
               alt="camera"
               style={styles.camera}
               onError={() => setStreamError(true)}

@@ -3,8 +3,8 @@ import useAuth from "../hooks/useAuth";
 import useAttendance from "../hooks/useAttendance";
 import { formatDateTime } from "../utils/formatDate";
 import { calcDuration, durationColor } from "../utils/calcDuration";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:5000";
+import { videoFeedUrl } from "../services/cameraService";
+import { exportUrl } from "../services/attendanceService";
 
 const Dashboard = () => {
   useAuth();
@@ -13,7 +13,7 @@ const Dashboard = () => {
   const [cameraError, setCameraError]   = useState(false);
   const [cameraLoaded, setCameraLoaded] = useState(false);
 
-  const downloadExcel = () => window.open(`${API_URL}/export`);
+  const downloadExcel = () => window.open(exportUrl());
 
   const totalEmployees   = new Set(records.map((r) => r.name)).size;
   const currentlyPresent = stats.currently_present;
@@ -65,7 +65,7 @@ const Dashboard = () => {
               </div>
             )}
             <img
-              src={`${API_URL}/video_feed`}
+              src={videoFeedUrl("view=dashboard")}
               alt="Live camera feed"
               style={{
                 ...styles.camera,
