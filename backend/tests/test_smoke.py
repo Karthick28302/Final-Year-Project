@@ -69,3 +69,40 @@ def test_users_route_returns_list(client, monkeypatch):
     data = resp.get_json()
     assert isinstance(data, list)
     assert data[0]["name"] == "karthick"
+
+def test_user_details_route_returns_user_and_summary(client, monkeypatch):
+    def fake_get_user_by_id(_user_id):
+        return {"id": 1, "name": "karthick", "created_at": "2026-04-15T10:00:00"}
+
+    def fake_get_user_attendance_summary(_user_id):
+        return {"total_records": 12, "today_records": 1, "currently_present": 0}
+
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.get_user_by_id",
+        fake_get_user_by_id,
+    )
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.get_user_attendance_summary",
+        fake_get_user_attendance_summary,
+    )
+
+    resp = client.get("/users/1")
+    assert resp.status_code == 200
+
+    data = resp.get_json()
+    assert data["user"]["id"] == 1
+    assert data["user"]["name"] == "karthick"
+    assert data["summary"]["total_records"] == 12
+    assert data["summary"]["today_records"] == 1
+    assert data["summary"]["currently_present"] == 0
+
+def test_user_details_route_returns_404_when_missing(client, monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.get_user_by_id",
+        lambda _user_id: None,
+    )
+
+    resp = client.get("/users/99999")
+    assert resp.status_code == 404
+    assert resp.get_json() == {"error": "User not found"}
+
