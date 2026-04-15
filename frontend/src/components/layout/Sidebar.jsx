@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const NAV_LINKS = [
   { to: "/dashboard",  label: "Dashboard",  icon: "📊" },
+  { to: "/employees",  label: "Employees",  icon: "👥" },
   { to: "/register",   label: "Register",   icon: "📸" },
   { to: "/attendance", label: "Attendance", icon: "📋" },
   { to: "/camera",     label: "Camera",     icon: "🎥" },
