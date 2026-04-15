@@ -99,3 +99,22 @@ def get_stats_today():
     cur.close()
     conn.close()
     return result
+
+def get_user_attendance_summary(user_id: int):
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute(
+        """
+        SELECT
+            COUNT(*) AS total_records,
+            SUM(DATE(login_time) = CURDATE()) AS today_records,
+            SUM(logout_time IS NULL) AS currently_present
+        FROM attendance
+        WHERE user_id = %s
+        """,
+        (user_id,),
+    )
+    summary = cur.fetchone()
+    cur.close()
+    conn.close()
+    return summary

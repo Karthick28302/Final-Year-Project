@@ -49,3 +49,15 @@ def get_all_users():
     cur.close()
     conn.close()
     return results
+
+def get_user_by_id(user_id: int):
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute(
+        "SELECT id, name, created_at FROM users WHERE id = %s",
+        (user_id,),
+    )
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+    return user
