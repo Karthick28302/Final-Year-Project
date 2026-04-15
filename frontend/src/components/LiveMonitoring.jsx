@@ -1,4 +1,5 @@
 import React from "react";
+import { videoFeedUrl } from "../services/cameraService";
 
 const CameraFeed = () => {
   return (
@@ -7,7 +8,7 @@ const CameraFeed = () => {
         <h2>🎥 Live Camera Feed</h2>
 
         <img
-          src="http://127.0.0.1:5000/video_feed"
+          src={videoFeedUrl("view=component-live-monitoring")}
           alt="camera"
           style={styles.camera}
         />

@@ -3,8 +3,9 @@ import useAuth        from "../hooks/useAuth";
 import useAttendance  from "../hooks/useAttendance";
 import { formatDateTime, todayISO } from "../utils/formatDate";
 import { calcDuration, durationColor } from "../utils/calcDuration";
+import { exportUrl } from "../services/attendanceService";
 
-function Attendance() {
+function AttendanceRecords() {
   useAuth();
 
   const [fromDate, setFromDate] = useState("");
@@ -25,6 +26,15 @@ function Attendance() {
     setFromDate("");
     setToDate("");
     setSearch("");
+  };
+
+  const downloadExcel = () => {
+    window.open(
+      exportUrl({
+        from: fromDate || undefined,
+        to: toDate || undefined,
+      })
+    );
   };
 
   return (
@@ -56,6 +66,7 @@ function Attendance() {
         />
         <button onClick={refresh}      style={styles.btnPrimary}>Apply</button>
         <button onClick={clearFilters} style={styles.btnSecondary}>Clear</button>
+        <button onClick={downloadExcel} style={styles.btnSecondary}>Export</button>
       </div>
 
       {/* Table */}
@@ -110,7 +121,7 @@ function Attendance() {
   );
 }
 
-export default Attendance;
+export default AttendanceRecords;
 
 const styles = {
   page:         { padding: "30px", background: "#f4f6f9", minHeight: "100vh" },
