@@ -49,3 +49,6 @@ backend/app/services/venv310/
 backend/venv/
 .venv/
 venv/
+
+backend/app/services/venv310/
+*.dat
