@@ -106,3 +106,43 @@ def test_user_details_route_returns_404_when_missing(client, monkeypatch):
     assert resp.status_code == 404
     assert resp.get_json() == {"error": "User not found"}
 
+
+def test_update_compensation_route_returns_200(client, monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.get_user_by_id",
+        lambda _user_id: {"id": 1, "name": "karthick"},
+    )
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.update_user_compensation",
+        lambda **_kwargs: True,
+    )
+
+    resp = client.put(
+        "/users/1/compensation",
+        json={"monthly_salary": 50000, "pf_percent": 12, "savings_percent": 10},
+    )
+    assert resp.status_code == 200
+    assert resp.get_json() == {"message": "Compensation updated"}
+
+
+def test_delete_user_route_returns_200(client, monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.get_user_by_id",
+        lambda _user_id: {"id": 1, "name": "karthick"},
+    )
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.delete_user_by_id",
+        lambda _user_id: True,
+    )
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.remove_encodings_for_name",
+        lambda _name: None,
+    )
+    monkeypatch.setattr(
+        "backend.app.routes.user_routes.reload_encodings",
+        lambda: None,
+    )
+
+    resp = client.delete("/users/1")
+    assert resp.status_code == 200
+    assert resp.get_json() == {"message": "User 'karthick' deleted"}

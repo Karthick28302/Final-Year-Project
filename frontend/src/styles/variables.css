@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+/* ═══════════════════════════════════════════════════
+   SMART ATTENDANCE — DESIGN TOKENS
+   ═══════════════════════════════════════════════════ */
+
+:root {
+
+  /* ── Typography ── */
+  --font-display : 'Syne', sans-serif;
+  --font-body    : 'DM Sans', sans-serif;
+  --font-mono    : 'DM Mono', monospace;
+
+  /* ── Brand colours ── */
+  --accent        : #00D4A8;
+  --accent-hover  : #00EFC0;
+  --accent-dim    : rgba(0, 212, 168, 0.10);
+  --accent-border : rgba(0, 212, 168, 0.28);
+  --accent-glow   : 0 0 20px rgba(0, 212, 168, 0.18);
+
+  --info          : #4DA6FF;
+  --info-dim      : rgba(77, 166, 255, 0.10);
+  --info-border   : rgba(77, 166, 255, 0.28);
+
+  --danger        : #FF4D6D;
+  --danger-dim    : rgba(255, 77, 109, 0.10);
+  --danger-border : rgba(255, 77, 109, 0.28);
+
+  --warning       : #FFB347;
+  --warning-dim   : rgba(255, 179, 71, 0.10);
+  --warning-border: rgba(255, 179, 71, 0.28);
+
+  --success       : #00D4A8;   /* alias of accent */
+
+  /* ── Backgrounds ── */
+  --bg            : #06091A;
+  --surface-1     : #0C1228;
+  --surface-2     : #111A35;
+  --surface-3     : #172040;
+  --surface-hover : rgba(255,255,255,0.035);
+
+  /* ── Borders ── */
+  --border        : rgba(255, 255, 255, 0.07);
+  --border-strong : rgba(255, 255, 255, 0.13);
+
+  /* ── Text ── */
+  --text-primary  : #EEF2FF;
+  --text-secondary: #8892A4;
+  --text-muted    : #444F65;
+  --text-accent   : var(--accent);
+
+  /* ── Layout ── */
+  --sidebar-w     : 244px;
+  --topbar-h      : 64px;
+  --page-pad      : 36px;
+  --page-pad-sm   : 20px;
+
+  /* ── Radii ── */
+  --r-sm  : 6px;
+  --r-md  : 10px;
+  --r-lg  : 16px;
+  --r-xl  : 22px;
+  --r-pill: 999px;
+
+  /* ── Shadows ── */
+  --shadow-sm : 0 2px 8px  rgba(0,0,0,0.30);
+  --shadow-md : 0 4px 24px rgba(0,0,0,0.40);
+  --shadow-lg : 0 8px 48px rgba(0,0,0,0.55);
+
+  /* ── Transitions ── */
+  --t-fast  : 0.12s ease;
+  --t-base  : 0.20s ease;
+  --t-slow  : 0.35s ease;
+
+  /* ── Z-index scale ── */
+  --z-sidebar : 100;
+  --z-topbar  : 90;
+  --z-modal   : 200;
+  --z-toast   : 300;
+}

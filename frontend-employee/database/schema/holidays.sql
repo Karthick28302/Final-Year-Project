@@ -1,0 +1,7 @@
+﻿CREATE TABLE IF NOT EXISTS holidays (
+  id SERIAL PRIMARY KEY,
+  holiday_name VARCHAR(200) NOT NULL,
+  holiday_date DATE NOT NULL,
+  holiday_type VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,124 +1,255 @@
 import React, { useState } from "react";
-import useAuth from "../hooks/useAuth";
-import useAttendance from "../hooks/useAttendance";
+import useAuth            from "../hooks/useAuth";
+import useAttendance      from "../hooks/useAttendance";
 import { formatDateTime } from "../utils/formatDate";
 import { calcDuration, durationColor } from "../utils/calcDuration";
-import { videoFeedUrl } from "../services/cameraService";
-import { exportUrl } from "../services/attendanceService";
+import { videoFeedUrl }   from "../services/cameraService";
+import { exportUrl }      from "../services/attendanceService";
+import PageWrapper        from "../components/layout/PageWrapper";
 
+/* ── Stat card ── */
+const StatCard = ({ label, value, color, icon, delay = 0 }) => (
+  <div style={{ ...s.statCard, animationDelay: `${delay}ms` }}>
+    <div style={{ ...s.statBar, background: color }} />
+    <div style={s.statTop}>
+      <span style={{ ...s.statIcon, background: `${color}18`, color }}>{icon}</span>
+      <span style={s.statLabel}>{label}</span>
+    </div>
+    <div style={{ ...s.statValue, color }}>{value ?? "—"}</div>
+  </div>
+);
+
+/* ── Camera feed ── */
+const CameraPanel = () => {
+  const [status,    setStatus]   = useState("connecting");
+  const [retryKey,  setRetry]    = useState(0);
+
+  return (
+    <div style={s.cameraWrap}>
+      {/* Status pill */}
+      <div style={s.statusPill}>
+        <span style={{
+          ...s.statusDot,
+          background: status === "live" ? "var(--accent)"
+                    : status === "error"? "var(--danger)"
+                    : "var(--warning)",
+          boxShadow: status === "live" ? "0 0 7px var(--accent)" : "none",
+        }} />
+        <span style={s.statusText}>
+          {status === "live" ? "Live" : status === "error" ? "Disconnected" : "Connecting..."}
+        </span>
+        {status === "error" && (
+          <button style={s.retryBtn}
+            onClick={() => { setStatus("connecting"); setRetry(k => k + 1); }}>
+            Retry
+          </button>
+        )}
+      </div>
+
+      {/* Placeholder */}
+      {status !== "live" && status !== "error" && (
+        <div style={s.cameraPlaceholder}>
+          <div style={s.scanLine} />
+          <div style={{ textAlign: "center", zIndex: 2 }}>
+            <div style={s.cameraIcon}>◉</div>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginTop: "10px" }}>
+              Initialising camera stream...
+            </p>
+            <p style={{ color: "var(--text-muted)", fontSize: "11px", marginTop: "4px" }}>
+              Make sure the backend is running on port 5000
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Error */}
+      {status === "error" && (
+        <div style={s.cameraError}>
+          <span style={{ fontSize: "32px", color: "var(--danger)" }}>⊗</span>
+          <p style={{ color: "var(--danger)", marginTop: "12px", fontWeight: 600 }}>
+            Camera stream unavailable
+          </p>
+          <p style={{ color: "var(--text-muted)", fontSize: "12px", marginTop: "4px" }}>
+            Backend may not be running
+          </p>
+        </div>
+      )}
+
+      {/* Stream */}
+      <img
+        key={retryKey}
+        src={videoFeedUrl()}
+        alt="Live feed"
+        style={{ ...s.cameraImg, display: status === "live" ? "block" : "none" }}
+        onLoad={()  => setStatus("live")}
+        onError={() => setStatus("error")}
+      />
+
+      {/* Corner brackets */}
+      {[
+        { top: "10px",    left: "10px",  borderTop: "2px solid var(--accent)", borderLeft:  "2px solid var(--accent)" },
+        { top: "10px",    right: "10px", borderTop: "2px solid var(--accent)", borderRight: "2px solid var(--accent)" },
+        { bottom: "10px", left: "10px",  borderBottom: "2px solid var(--accent)", borderLeft:  "2px solid var(--accent)" },
+        { bottom: "10px", right: "10px", borderBottom: "2px solid var(--accent)", borderRight: "2px solid var(--accent)" },
+      ].map((corner, i) => (
+        <div key={i} style={{ position: "absolute", width: "14px", height: "14px", pointerEvents: "none", ...corner }} />
+      ))}
+
+      {/* Live pill at bottom */}
+      {status === "live" && (
+        <div style={s.livePill}>
+          <span style={s.liveDot} />
+          FACE RECOGNITION ACTIVE
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ── Main page ── */
 const Dashboard = () => {
   useAuth();
 
   const { records, stats, loading, error, refresh } = useAttendance({ interval: 5000 });
-  const [cameraError, setCameraError]   = useState(false);
-  const [cameraLoaded, setCameraLoaded] = useState(false);
 
-  const downloadExcel = () => window.open(exportUrl());
-
-  const totalEmployees   = new Set(records.map((r) => r.name)).size;
-  const currentlyPresent = stats.currently_present;
-  const absentToday      = Math.max(0, totalEmployees - currentlyPresent);
+  const total   = new Set(records.map((r) => r.name)).size;
+  const present = stats.currently_present ?? 0;
+  const absent  = Math.max(0, total - present);
+  const rate    = total > 0 ? `${Math.round((present / total) * 100)}%` : "—";
 
   return (
-    <div style={styles.page}>
-      <h1 style={styles.heading}>Smart Attendance Dashboard</h1>
+    <PageWrapper
+      title="Dashboard"
+      subtitle="Live attendance overview and face recognition monitoring"
+      actions={
+        <>
+          <button className="btn btn-secondary btn-sm" onClick={refresh}>↻ Refresh</button>
+          <button className="btn btn-primary  btn-sm" onClick={() => window.open(exportUrl())}>
+            ↓ Export Excel
+          </button>
+        </>
+      }
+    >
 
       {/* ── Stat cards ── */}
-      <div style={styles.cardRow}>
-        <div style={styles.card}>
-          <p style={styles.cardLabel}>Total Employees</p>
-          <p style={styles.cardValue}>{totalEmployees}</p>
-        </div>
-        <div style={{ ...styles.card, borderTop: "4px solid #16a34a" }}>
-          <p style={styles.cardLabel}>Currently Present</p>
-          <p style={{ ...styles.cardValue, color: "#16a34a" }}>{currentlyPresent}</p>
-        </div>
-        <div style={{ ...styles.card, borderTop: "4px solid #dc2626" }}>
-          <p style={styles.cardLabel}>Absent Today</p>
-          <p style={{ ...styles.cardValue, color: "#dc2626" }}>{absentToday}</p>
-        </div>
+      <div style={s.statsGrid} className="stagger">
+        <StatCard label="Total Employees"   value={total}   color="var(--info)"    icon="◎" delay={0}   />
+        <StatCard label="Currently Present" value={present} color="var(--accent)"  icon="◉" delay={60}  />
+        <StatCard label="Absent Today"      value={absent}  color="var(--danger)"  icon="○" delay={120} />
+        <StatCard label="Attendance Rate"   value={rate}    color="var(--warning)" icon="▲" delay={180} />
       </div>
 
-      {/* ── Live Camera ── */}
-      <div style={styles.card}>
-        <h2 style={styles.sectionTitle}>Live Camera</h2>
+      {/* ── Two-col grid ── */}
+      <div style={s.twoCol}>
 
-        {cameraError ? (
-          /* Retry button shown when stream fails */
-          <div style={styles.cameraError}>
-            <p style={{ color: "#dc2626", marginBottom: "12px" }}>
-              Camera stream unavailable. Make sure the backend is running.
-            </p>
-            <button
-              style={styles.btnSecondary}
-              onClick={() => setCameraError(false)}
-            >
-              Retry
-            </button>
+        {/* Camera */}
+        <div style={s.card}>
+          <div style={s.cardHead}>
+            <span style={s.cardHeadTitle}>Live Camera Feed</span>
+            <span style={s.cardHeadBadge}>Port 5000</span>
           </div>
-        ) : (
-          <div style={styles.cameraWrap}>
-            {/* Loading placeholder shown until stream is ready */}
-            {!cameraLoaded && (
-              <div style={styles.cameraPlaceholder}>
-                <p style={{ color: "#94a3b8" }}>Connecting to camera...</p>
+          <CameraPanel />
+        </div>
+
+        {/* Recent activity */}
+        <div style={s.card}>
+          <div style={s.cardHead}>
+            <span style={s.cardHeadTitle}>Recent Activity</span>
+            <span style={s.cardHeadMeta}>Last 6 entries</span>
+          </div>
+          <div style={s.activityList}>
+            {loading ? (
+              <div style={{ padding: "30px", textAlign: "center" }}>
+                <div style={s.spinner} />
+              </div>
+            ) : records.slice(0, 6).length > 0 ? (
+              records.slice(0, 6).map((r, i) => (
+                <div key={i} style={s.activityItem}>
+                  <div style={s.activityAvatar}>
+                    {r.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={s.activityMeta}>
+                    <span style={s.activityName}>{r.name}</span>
+                    <span style={s.activityTime}>
+                      {r.logout_time ? "Left" : "Arrived"} ·{" "}
+                      {new Date(r.login_time).toLocaleTimeString("en-IN", {
+                        hour: "2-digit", minute: "2-digit", hour12: true,
+                      })}
+                    </span>
+                  </div>
+                  <span style={{
+                    ...s.badge,
+                    background: r.logout_time ? "var(--danger-dim)" : "var(--accent-dim)",
+                    color:      r.logout_time ? "var(--danger)"     : "var(--accent)",
+                    border:     `1px solid ${r.logout_time ? "var(--danger-border)" : "var(--accent-border)"}`,
+                  }}>
+                    <span style={{ fontSize: "7px" }}>●</span>
+                    {r.logout_time ? "Offline" : "Present"}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                No activity today
               </div>
             )}
-            <img
-              src={videoFeedUrl("view=dashboard")}
-              alt="Live camera feed"
-              style={{
-                ...styles.camera,
-                display: cameraLoaded ? "block" : "none",
-              }}
-              onLoad={()  => setCameraLoaded(true)}
-              onError={() => setCameraError(true)}
-            />
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── Attendance table ── */}
-      <div style={styles.card}>
-        <div style={styles.tableHeader}>
-          <h2 style={styles.sectionTitle}>Today's Attendance</h2>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button onClick={refresh}       style={styles.btnSecondary}>Refresh</button>
-            <button onClick={downloadExcel} style={styles.btnPrimary}>Download Excel</button>
+      <div style={{ ...s.card, padding: 0, overflow: "hidden" }}>
+        <div style={{ ...s.cardHead, padding: "16px 20px" }}>
+          <span style={s.cardHeadTitle}>Today's Attendance</span>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button className="btn btn-secondary btn-sm" onClick={refresh}>↻</button>
+            <button className="btn btn-primary btn-sm" onClick={() => window.open(exportUrl())}>
+              ↓ Excel
+            </button>
           </div>
         </div>
 
-        {error && <p style={{ color: "#dc2626" }}>{error}</p>}
+        {error && (
+          <div style={{ padding: "12px 20px" }}>
+            <div style={s.errorBox}><span>⚠</span> {error}</div>
+          </div>
+        )}
 
         {loading ? (
-          <p style={{ color: "#64748b" }}>Loading...</p>
+          <div style={{ padding: "40px", display: "flex", justifyContent: "center" }}>
+            <div style={s.spinner} />
+          </div>
         ) : records.length > 0 ? (
-          <table style={styles.table}>
-            <thead style={styles.thead}>
-              <tr>
-                <th style={styles.th}>Name</th>
-                <th style={styles.th}>Login</th>
-                <th style={styles.th}>Logout</th>
-                <th style={styles.th}>Duration</th>
-                <th style={styles.th}>Status</th>
+          <table style={s.table}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                {["#", "Employee", "Login Time", "Logout Time", "Duration", "Status"].map((h) => (
+                  <th key={h} style={s.th}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {records.map((r, i) => (
-                <tr key={i} style={styles.row}>
-                  <td style={{ ...styles.td, textTransform: "capitalize", fontWeight: 600 }}>{r.name}</td>
-                  <td style={styles.td}>{formatDateTime(r.login_time)}</td>
-                  <td style={styles.td}>{formatDateTime(r.logout_time)}</td>
-                  <td style={{ ...styles.td, color: durationColor(r.login_time, r.logout_time), fontWeight: 500 }}>
+                <tr key={i} style={s.tr}>
+                  <td style={{ ...s.td, ...s.tdMono, color: "var(--text-muted)" }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </td>
+                  <td style={{ ...s.td, fontWeight: 600, color: "var(--text-primary)", textTransform: "capitalize" }}>
+                    {r.name}
+                  </td>
+                  <td style={{ ...s.td, ...s.tdMono }}>{formatDateTime(r.login_time)}</td>
+                  <td style={{ ...s.td, ...s.tdMono }}>{formatDateTime(r.logout_time)}</td>
+                  <td style={{ ...s.td, ...s.tdMono, color: durationColor(r.login_time, r.logout_time), fontWeight: 500 }}>
                     {r.duration || calcDuration(r.login_time, r.logout_time)}
                   </td>
-                  <td style={styles.td}>
+                  <td style={s.td}>
                     <span style={{
-                      padding: "3px 10px", borderRadius: "12px",
-                      fontSize: "12px", fontWeight: 600,
-                      background: r.logout_time ? "#fee2e2" : "#dcfce7",
-                      color:      r.logout_time ? "#dc2626" : "#16a34a",
+                      ...s.badge,
+                      background: r.logout_time ? "var(--danger-dim)" : "var(--accent-dim)",
+                      color:      r.logout_time ? "var(--danger)"     : "var(--accent)",
+                      border:     `1px solid ${r.logout_time ? "var(--danger-border)" : "var(--accent-border)"}`,
                     }}>
+                      <span style={{ fontSize: "7px" }}>●</span>
                       {r.logout_time ? "Offline" : "Present"}
                     </span>
                   </td>
@@ -127,33 +258,362 @@ const Dashboard = () => {
             </tbody>
           </table>
         ) : (
-          <p style={{ color: "#64748b" }}>No attendance records yet today.</p>
+          <div style={{ padding: "50px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+            No attendance records yet today.
+          </div>
         )}
       </div>
-    </div>
+
+    </PageWrapper>
   );
 };
 
 export default Dashboard;
 
-const styles = {
-  page:             { padding: "30px", background: "#f4f6f9", minHeight: "100vh" },
-  heading:          { margin: "0 0 24px", color: "#1e293b", fontSize: "24px", fontWeight: 600 },
-  cardRow:          { display: "flex", gap: "20px", marginBottom: "24px", flexWrap: "wrap" },
-  card:             { background: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 2px 10px rgba(0,0,0,0.08)", flex: 1, minWidth: "200px", marginBottom: "20px" },
-  cardLabel:        { margin: "0 0 8px", color: "#64748b", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.05em" },
-  cardValue:        { margin: 0, fontSize: "32px", fontWeight: 700, color: "#1e293b" },
-  sectionTitle:     { margin: "0 0 16px", fontSize: "18px", fontWeight: 600, color: "#1e293b" },
-  cameraWrap:       { width: "100%", display: "flex", justifyContent: "center" },
-  camera:           { width: "100%", maxWidth: "700px", borderRadius: "10px", border: "2px solid #e2e8f0" },
-  cameraPlaceholder:{ width: "100%", maxWidth: "700px", height: "300px", background: "#f8fafc", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", border: "2px dashed #e2e8f0" },
-  cameraError:      { textAlign: "center", padding: "40px 0" },
-  tableHeader:      { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" },
-  table:            { width: "100%", borderCollapse: "collapse" },
-  thead:            { background: "#f1f5f9" },
-  th:               { padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#475569" },
-  row:              { borderBottom: "1px solid #e2e8f0" },
-  td:               { padding: "10px 14px", fontSize: "14px", color: "#334155" },
-  btnPrimary:       { padding: "8px 16px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 500 },
-  btnSecondary:     { padding: "8px 16px", background: "#e2e8f0", color: "#334155", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 500 },
+/* ─────────────────────────────────────────
+   STYLES
+───────────────────────────────────────── */
+const s = {
+
+  statsGrid: {
+    display:             "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(175px, 1fr))",
+    gap:                 "16px",
+  },
+
+  statCard: {
+    background:    "var(--surface-1)",
+    border:        "1px solid var(--border)",
+    borderRadius:  "var(--r-lg)",
+    padding:       "20px 22px",
+    position:      "relative",
+    overflow:      "hidden",
+    opacity:       0,
+    animation:     "fadeUp 0.4s ease forwards",
+    transition:    "border-color 0.2s, box-shadow 0.2s",
+  },
+  statBar: {
+    position: "absolute",
+    top: 0, left: 0, right: 0,
+    height: "2px",
+  },
+  statTop: {
+    display:      "flex",
+    alignItems:   "center",
+    gap:          "10px",
+    marginBottom: "14px",
+  },
+  statIcon: {
+    width:          "34px",
+    height:         "34px",
+    borderRadius:   "var(--r-sm)",
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "center",
+    fontSize:       "15px",
+    flexShrink:     0,
+  },
+  statLabel: {
+    fontFamily:    "var(--font-display)",
+    fontSize:      "11px",
+    fontWeight:    "600",
+    letterSpacing: "0.07em",
+    textTransform: "uppercase",
+    color:         "var(--text-muted)",
+    lineHeight:    1.3,
+  },
+  statValue: {
+    fontFamily: "var(--font-display)",
+    fontSize:   "38px",
+    fontWeight: "800",
+    lineHeight: 1,
+  },
+
+  /* Two column grid */
+  twoCol: {
+    display:             "grid",
+    gridTemplateColumns: "1.4fr 1fr",
+    gap:                 "20px",
+  },
+
+  /* Card */
+  card: {
+    background:   "var(--surface-1)",
+    border:       "1px solid var(--border)",
+    borderRadius: "var(--r-lg)",
+    overflow:     "hidden",
+  },
+  cardHead: {
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "space-between",
+    padding:        "14px 18px",
+    borderBottom:   "1px solid var(--border)",
+  },
+  cardHeadTitle: {
+    fontFamily: "var(--font-display)",
+    fontWeight: "700",
+    fontSize:   "14px",
+    color:      "var(--text-primary)",
+  },
+  cardHeadBadge: {
+    fontFamily:   "var(--font-mono)",
+    fontSize:     "11px",
+    padding:      "3px 10px",
+    background:   "var(--accent-dim)",
+    color:        "var(--accent)",
+    border:       "1px solid var(--accent-border)",
+    borderRadius: "var(--r-pill)",
+  },
+  cardHeadMeta: {
+    fontSize:   "12px",
+    color:      "var(--text-muted)",
+    fontFamily: "var(--font-mono)",
+  },
+
+  /* Camera */
+  cameraWrap: {
+    position:       "relative",
+    background:     "#020810",
+    minHeight:      "320px",
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "center",
+    overflow:       "hidden",
+  },
+  statusPill: {
+    position:       "absolute",
+    top:            "12px",
+    left:           "50%",
+    transform:      "translateX(-50%)",
+    display:        "flex",
+    alignItems:     "center",
+    gap:            "7px",
+    background:     "rgba(0,0,0,0.72)",
+    backdropFilter: "blur(10px)",
+    padding:        "5px 14px",
+    borderRadius:   "var(--r-pill)",
+    border:         "1px solid var(--border)",
+    zIndex:         10,
+    whiteSpace:     "nowrap",
+  },
+  statusDot: {
+    width:        "7px",
+    height:       "7px",
+    borderRadius: "50%",
+    flexShrink:   0,
+  },
+  statusText: {
+    fontFamily: "var(--font-mono)",
+    fontSize:   "11px",
+    color:      "var(--text-secondary)",
+  },
+  retryBtn: {
+    background:   "var(--danger-dim)",
+    color:        "var(--danger)",
+    border:       "none",
+    padding:      "2px 8px",
+    borderRadius: "4px",
+    fontSize:     "11px",
+    cursor:       "pointer",
+    fontFamily:   "var(--font-body)",
+  },
+  cameraPlaceholder: {
+    width:          "100%",
+    height:         "320px",
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "center",
+    position:       "relative",
+    overflow:       "hidden",
+  },
+  scanLine: {
+    position:   "absolute",
+    left:       0,
+    width:      "100%",
+    height:     "2px",
+    background: "linear-gradient(90deg, transparent, var(--accent), transparent)",
+    opacity:    0.3,
+    animation:  "scan-line 3s linear infinite",
+    zIndex:     1,
+  },
+  cameraIcon: {
+    fontSize:    "40px",
+    color:       "rgba(0,212,168,0.25)",
+    marginBottom:"8px",
+    animation:   "glow-pulse 2.5s ease infinite",
+  },
+  cameraError: {
+    textAlign:      "center",
+    padding:        "48px 24px",
+    display:        "flex",
+    flexDirection:  "column",
+    alignItems:     "center",
+  },
+  cameraImg: {
+    width:      "100%",
+    height:     "100%",
+    objectFit:  "cover",
+    display:    "block",
+    minHeight:  "320px",
+  },
+  livePill: {
+    position:       "absolute",
+    bottom:         "12px",
+    left:           "50%",
+    transform:      "translateX(-50%)",
+    display:        "flex",
+    alignItems:     "center",
+    gap:            "7px",
+    background:     "rgba(0,0,0,0.75)",
+    backdropFilter: "blur(10px)",
+    padding:        "5px 14px",
+    borderRadius:   "var(--r-pill)",
+    border:         "1px solid var(--border)",
+    fontFamily:     "var(--font-mono)",
+    fontSize:       "10px",
+    color:          "var(--text-secondary)",
+    whiteSpace:     "nowrap",
+    zIndex:         5,
+  },
+  liveDot: {
+    width:        "6px",
+    height:       "6px",
+    borderRadius: "50%",
+    background:   "var(--danger)",
+    boxShadow:    "0 0 6px var(--danger)",
+    display:      "inline-block",
+    animation:    "pulse-dot 1.2s ease infinite",
+    flexShrink:   0,
+  },
+
+  /* Activity list */
+  activityList: {
+    display:       "flex",
+    flexDirection: "column",
+  },
+  activityItem: {
+    display:    "flex",
+    alignItems: "center",
+    gap:        "12px",
+    padding:    "10px 18px",
+    transition: "background 0.12s",
+    borderBottom: "1px solid var(--border)",
+    cursor:     "default",
+  },
+  activityAvatar: {
+    width:          "34px",
+    height:         "34px",
+    borderRadius:   "8px",
+    background:     "var(--accent-dim)",
+    border:         "1px solid var(--accent-border)",
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "center",
+    color:          "var(--accent)",
+    fontFamily:     "var(--font-display)",
+    fontWeight:     "700",
+    fontSize:       "13px",
+    flexShrink:     0,
+  },
+  activityMeta: {
+    flex:          1,
+    display:       "flex",
+    flexDirection: "column",
+    gap:           "2px",
+    overflow:      "hidden",
+  },
+  activityName: {
+    fontSize:     "13px",
+    fontWeight:   "600",
+    color:        "var(--text-primary)",
+    textTransform:"capitalize",
+    whiteSpace:   "nowrap",
+    overflow:     "hidden",
+    textOverflow: "ellipsis",
+  },
+  activityTime: {
+    fontFamily: "var(--font-mono)",
+    fontSize:   "11px",
+    color:      "var(--text-muted)",
+  },
+
+  /* Badge */
+  badge: {
+    display:      "inline-flex",
+    alignItems:   "center",
+    gap:          "5px",
+    padding:      "3px 9px",
+    borderRadius: "var(--r-pill)",
+    fontSize:     "11.5px",
+    fontWeight:   "500",
+    whiteSpace:   "nowrap",
+    flexShrink:   0,
+  },
+
+  /* Table */
+  table: {
+    width:          "100%",
+    borderCollapse: "collapse",
+  },
+  th: {
+    padding:       "10px 16px",
+    textAlign:     "left",
+    fontFamily:    "var(--font-display)",
+    fontSize:      "11px",
+    fontWeight:    "600",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color:         "var(--text-muted)",
+    whiteSpace:    "nowrap",
+  },
+  tr: {
+    borderBottom: "1px solid var(--border)",
+    transition:   "background 0.12s",
+  },
+  td: {
+    padding:   "13px 16px",
+    fontSize:  "13.5px",
+    color:     "var(--text-secondary)",
+    verticalAlign: "middle",
+  },
+  tdMono: {
+    fontFamily: "var(--font-mono)",
+    fontSize:   "12.5px",
+  },
+
+  /* Error box */
+  errorBox: {
+    display:      "flex",
+    alignItems:   "center",
+    gap:          "8px",
+    padding:      "10px 14px",
+    background:   "var(--danger-dim)",
+    border:       "1px solid var(--danger-border)",
+    borderRadius: "var(--r-md)",
+    color:        "var(--danger)",
+    fontSize:     "13px",
+    fontWeight:   "500",
+  },
+
+  /* Spinner */
+  spinner: {
+    width:        "24px",
+    height:       "24px",
+    border:       "2px solid var(--border)",
+    borderTop:    "2px solid var(--accent)",
+    borderRadius: "50%",
+    animation:    "spin 0.65s linear infinite",
+  },
 };
+
+/* ── Hover effects (injected once) ── */
+if (typeof document !== "undefined" && !document.getElementById("dashboard-hover-style")) {
+  const el = document.createElement("style");
+  el.id = "dashboard-hover-style";
+  el.textContent = `
+    [data-activity]:hover { background: var(--surface-hover) !important; }
+    [data-tr]:hover       { background: var(--surface-hover) !important; }
+  `;
+  document.head.appendChild(el);
+}

@@ -35,3 +35,18 @@ def append_encoding(name: str, encoding):
     data["encodings"].append(encoding)
     data["names"].append(name.strip().lower())
     save_encodings(data)
+
+
+def remove_encodings_for_name(name: str):
+    """Remove all saved encodings for a user name."""
+    target = name.strip().lower()
+    data = load_encodings()
+    kept_encodings = []
+    kept_names = []
+
+    for enc, n in zip(data.get("encodings", []), data.get("names", [])):
+        if n.strip().lower() != target:
+            kept_encodings.append(enc)
+            kept_names.append(n)
+
+    save_encodings({"encodings": kept_encodings, "names": kept_names})

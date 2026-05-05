@@ -1,4 +1,48 @@
 from backend.app.database.db_connection import get_db_connection
+from backend.app.config import DB_CONFIG
+
+
+def ensure_user_compensation_columns():
+    """Ensure compensation columns exist in users table."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = %s
+          AND table_name = 'users'
+          AND column_name IN ('monthly_salary', 'pf_percent', 'savings_percent')
+        """,
+        (DB_CONFIG["database"],),
+    )
+    existing = {row[0] for row in cur.fetchall()}
+
+    if "monthly_salary" not in existing:
+        cur.execute(
+            """
+            ALTER TABLE users
+            ADD COLUMN monthly_salary DECIMAL(12, 2) NOT NULL DEFAULT 0
+            """
+        )
+    if "pf_percent" not in existing:
+        cur.execute(
+            """
+            ALTER TABLE users
+            ADD COLUMN pf_percent DECIMAL(5, 2) NOT NULL DEFAULT 12
+            """
+        )
+    if "savings_percent" not in existing:
+        cur.execute(
+            """
+            ALTER TABLE users
+            ADD COLUMN savings_percent DECIMAL(5, 2) NOT NULL DEFAULT 10
+            """
+        )
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 def get_user_by_name(name: str):
@@ -42,22 +86,74 @@ def user_exists(name: str) -> bool:
 
 def get_all_users():
     """Return list of all registered users."""
+    ensure_user_compensation_columns()
     conn = get_db_connection()
     cur = conn.cursor(dictionary=True)
-    cur.execute("SELECT id, name, created_at FROM users ORDER BY name")
+    cur.execute(
+        """
+        SELECT id, name, created_at, monthly_salary, pf_percent, savings_percent
+        FROM users
+        ORDER BY name
+        """
+    )
     results = cur.fetchall()
     cur.close()
     conn.close()
     return results
 
 def get_user_by_id(user_id: int):
+    ensure_user_compensation_columns()
     conn = get_db_connection()
     cur = conn.cursor(dictionary=True)
     cur.execute(
-        "SELECT id, name, created_at FROM users WHERE id = %s",
+        """
+        SELECT id, name, created_at, monthly_salary, pf_percent, savings_percent
+        FROM users
+        WHERE id = %s
+        """,
         (user_id,),
     )
     user = cur.fetchone()
     cur.close()
     conn.close()
     return user
+
+
+def update_user_compensation(
+    user_id: int,
+    monthly_salary: float,
+    pf_percent: float,
+    savings_percent: float,
+):
+    ensure_user_compensation_columns()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        UPDATE users
+        SET monthly_salary = %s,
+            pf_percent = %s,
+            savings_percent = %s
+        WHERE id = %s
+        """,
+        (monthly_salary, pf_percent, savings_percent, user_id),
+    )
+    conn.commit()
+    updated = cur.rowcount > 0
+    cur.close()
+    conn.close()
+    return updated
+
+
+def delete_user_by_id(user_id: int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # Delete dependent attendance rows first to support older schemas
+    # where FK may not be ON DELETE CASCADE.
+    cur.execute("DELETE FROM attendance WHERE user_id = %s", (user_id,))
+    cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+    conn.commit()
+    deleted = cur.rowcount > 0
+    cur.close()
+    conn.close()
+    return deleted
