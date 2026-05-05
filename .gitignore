@@ -39,3 +39,8 @@ Thumbs.db
 
 # Database migrations outputs
 database/migrations/*.sql
+
+backend/app/services/venv310/
+backend/venv/
+.venv/
+venv/
