@@ -52,3 +52,5 @@ venv/
 
 backend/app/services/venv310/
 *.dat
+
+Project/
