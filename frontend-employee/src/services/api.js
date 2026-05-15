@@ -2,9 +2,10 @@ import axios from "axios";
 
 const TOKEN_KEY = "employee_token";
 const EMPLOYEE_KEY = "employee_user";
+const API_BASE_URL = process.env.REACT_APP_EMPLOYEE_API_URL || "http://localhost:5000/api/v1";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api/v1",
+  baseURL: API_BASE_URL,
 });
 
 API.interceptors.request.use((config) => {

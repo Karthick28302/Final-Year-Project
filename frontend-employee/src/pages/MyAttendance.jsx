@@ -7,21 +7,26 @@ const MyAttendance = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const now = new Date();
+  const [month, setMonth] = useState(String(now.getMonth() + 1));
+  const [year, setYear] = useState(String(now.getFullYear()));
+
+  const fetchAttendance = async (filters = {}) => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await getMyAttendance(filters);
+      setRows(response);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to load attendance.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        setError("");
-        const response = await getMyAttendance();
-        setRows(response);
-      } catch (err) {
-        setError(err?.response?.data?.message || "Failed to load attendance.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAttendance();
+    fetchAttendance({ month, year });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getStatusClass = (status) => {
@@ -31,9 +36,51 @@ const MyAttendance = () => {
     return "pill pill-default";
   };
 
+  const handleApplyFilter = (event) => {
+    event.preventDefault();
+    fetchAttendance({ month, year });
+  };
+
+  const handleResetFilter = () => {
+    const currentMonth = String(now.getMonth() + 1);
+    const currentYear = String(now.getFullYear());
+    setMonth(currentMonth);
+    setYear(currentYear);
+    fetchAttendance({ month: currentMonth, year: currentYear });
+  };
+
+  const yearOptions = [];
+  for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y -= 1) {
+    yearOptions.push(String(y));
+  }
+
   return (
     <div className="page">
       <h2 className="page-title">My Attendance</h2>
+      <div className="card" style={{ marginBottom: 12 }}>
+        <form onSubmit={handleApplyFilter} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <label htmlFor="attendance-month">Month</label>
+          <select id="attendance-month" value={month} onChange={(e) => setMonth(e.target.value)}>
+            {Array.from({ length: 12 }, (_, index) => String(index + 1)).map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="attendance-year">Year</label>
+          <select id="attendance-year" value={year} onChange={(e) => setYear(e.target.value)}>
+            {yearOptions.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+          <button type="submit">Apply</button>
+          <button type="button" onClick={handleResetFilter}>
+            Reset
+          </button>
+        </form>
+      </div>
       <div className="card table-wrap">
         {loading ? (
           <div className="loading-wrap">

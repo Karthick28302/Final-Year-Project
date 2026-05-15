@@ -42,8 +42,11 @@ const useEmployeeAuth = () => {
         email: me.email,
         employeeCode: me.employeeCode,
       };
-      setEmployee((prev) => ({ ...prev, ...normalized }));
-      localStorage.setItem(EMPLOYEE_KEY, JSON.stringify({ ...employee, ...normalized }));
+      setEmployee((prev) => {
+        const merged = { ...prev, ...normalized };
+        localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(merged));
+        return merged;
+      });
     } catch {
       logout();
     }

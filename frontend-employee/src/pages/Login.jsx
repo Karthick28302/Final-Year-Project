@@ -16,13 +16,13 @@ const Login = ({ onLogin, loading }) => {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: "40px auto" }}>
-      <h2>Employee Login</h2>
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
+    <div className="card login-card">
+      <h2 className="page-title">Employee Login</h2>
+      <form onSubmit={handleSubmit} className="login-form">
         <input value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="Employee Code or Email" />
         <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
         <button type="submit" disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
-        {error ? <p style={{ color: "red" }}>{error}</p> : null}
+        {error ? <p className="error-text">{error}</p> : null}
       </form>
     </div>
   );
